@@ -20,7 +20,6 @@ using QuantConnect.Data;
 using QuantConnect.Data.UniverseSelection;
 using QuantConnect.Interfaces;
 using QuantConnect.Orders;
-using QuantConnect.Scheduling;
 
 namespace QuantConnect.Algorithm.CSharp
 {
@@ -97,11 +96,11 @@ namespace QuantConnect.Algorithm.CSharp
 
         public override void OnSecuritiesChanged(SecurityChanges changes)
         {
-            var subscriptions = changes.AddedSecurities.First().Subscriptions;
-            if (subscriptions.Count() != 2 &&
+            var subscriptions = SubscriptionManager.SubscriptionDataConfigService.GetSubscriptionDataConfigs(_symbol);
+            if (!(subscriptions.Count == 2 &&
                 subscriptions.Any(s=>s.TickType==TickType.Trade) &&
                 subscriptions.Any(s=>s.TickType==TickType.Quote)
-                )
+                ))
             {
                 throw new Exception($"Subscriptions were not correctly added.");
             }

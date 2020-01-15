@@ -39,7 +39,7 @@ namespace QuantConnect.Tests.Common.Orders.Fills
         {
             var model = new ImmediateFillModel();
             var order = new MarketOrder(Symbols.SPY, 100, Noon);
-            var config = CreateTradeBarConfig(Symbols.SPY);
+            var config = CreateQuoteBarConfig(Symbols.SPY);
             var security = new Security(
                 SecurityExchangeHoursTests.CreateUsEquitySecurityExchangeHours(),
                 config,
@@ -67,7 +67,7 @@ namespace QuantConnect.Tests.Common.Orders.Fills
         {
             var model = new ImmediateFillModel();
             var order = new MarketOrder(Symbols.SPY, -100, Noon);
-            var config = CreateTradeBarConfig(Symbols.SPY);
+            var config = CreateQuoteBarConfig(Symbols.SPY);
             var security = new Security(
                 SecurityExchangeHoursTests.CreateUsEquitySecurityExchangeHours(),
                 config,
@@ -95,7 +95,7 @@ namespace QuantConnect.Tests.Common.Orders.Fills
         {
             var model = new ImmediateFillModel();
             var order = new LimitOrder(Symbols.SPY, 100, 101.5m, Noon);
-            var config = CreateTradeBarConfig(Symbols.SPY);
+            var config = CreateQuoteBarConfig(Symbols.SPY);
             var security = new Security(
                 SecurityExchangeHoursTests.CreateUsEquitySecurityExchangeHours(),
                 config,
@@ -133,7 +133,7 @@ namespace QuantConnect.Tests.Common.Orders.Fills
         {
             var model = new ImmediateFillModel();
             var order = new LimitOrder(Symbols.SPY, -100, 101.5m, Noon);
-            var config = CreateTradeBarConfig(Symbols.SPY);
+            var config = CreateQuoteBarConfig(Symbols.SPY);
             var security = new Security(
                 SecurityExchangeHoursTests.CreateUsEquitySecurityExchangeHours(),
                 config,
@@ -171,7 +171,7 @@ namespace QuantConnect.Tests.Common.Orders.Fills
         {
             var model = new ImmediateFillModel();
             var order = new StopLimitOrder(Symbols.SPY, 100, 101.5m, 101.75m, Noon);
-            var config = CreateTradeBarConfig(Symbols.SPY);
+            var config = CreateQuoteBarConfig(Symbols.SPY);
             var security = new Security(
                 SecurityExchangeHoursTests.CreateUsEquitySecurityExchangeHours(),
                 config,
@@ -221,7 +221,7 @@ namespace QuantConnect.Tests.Common.Orders.Fills
         {
             var model = new ImmediateFillModel();
             var order = new StopLimitOrder(Symbols.SPY, -100, 101.75m, 101.50m, Noon);
-            var config = CreateTradeBarConfig(Symbols.SPY);
+            var config = CreateQuoteBarConfig(Symbols.SPY);
             var security = new Security(
                 SecurityExchangeHoursTests.CreateUsEquitySecurityExchangeHours(),
                 config,
@@ -271,7 +271,7 @@ namespace QuantConnect.Tests.Common.Orders.Fills
         {
             var model = new ImmediateFillModel();
             var order = new StopMarketOrder(Symbols.SPY, 100, 101.5m, Noon);
-            var config = CreateTradeBarConfig(Symbols.SPY);
+            var config = CreateQuoteBarConfig(Symbols.SPY);
             var security = new Security(
                 SecurityExchangeHoursTests.CreateUsEquitySecurityExchangeHours(),
                 config,
@@ -313,7 +313,7 @@ namespace QuantConnect.Tests.Common.Orders.Fills
         {
             var model = new ImmediateFillModel();
             var order = new StopMarketOrder(Symbols.SPY, -100, 101.5m, Noon);
-            var config = CreateTradeBarConfig(Symbols.SPY);
+            var config = CreateQuoteBarConfig(Symbols.SPY);
             var security = new Security(
                 SecurityExchangeHoursTests.CreateUsEquitySecurityExchangeHours(),
                 config,
@@ -356,7 +356,7 @@ namespace QuantConnect.Tests.Common.Orders.Fills
             var reference = new DateTime(2015, 06, 05, 9, 0, 0); // before market open
             var model = new ImmediateFillModel();
             var order = new MarketOnOpenOrder(Symbols.SPY, 100, reference);
-            var config = CreateTradeBarConfig(Symbols.SPY);
+            var config = CreateQuoteBarConfig(Symbols.SPY);
             var security = new Security(
                 SecurityExchangeHoursTests.CreateUsEquitySecurityExchangeHours(),
                 config,
@@ -406,7 +406,7 @@ namespace QuantConnect.Tests.Common.Orders.Fills
             var reference = new DateTime(2015, 06, 05, 15, 0, 0); // before market close
             var model = new ImmediateFillModel();
             var order = new MarketOnCloseOrder(Symbols.SPY, 100, reference);
-            var config = CreateTradeBarConfig(Symbols.SPY);
+            var config = CreateQuoteBarConfig(Symbols.SPY);
             var security = new Security(
                 SecurityExchangeHoursTests.CreateUsEquitySecurityExchangeHours(),
                 config,
@@ -682,7 +682,7 @@ namespace QuantConnect.Tests.Common.Orders.Fills
             var timeKeeper = new TimeKeeper(time.ConvertToUtc(TimeZones.NewYork), TimeZones.NewYork);
             var symbol = Symbol.Create("SPY", SecurityType.Equity, Market.USA);
 
-            var config = new SubscriptionDataConfig(typeof(TradeBar), symbol, Resolution.Minute, TimeZones.NewYork, TimeZones.NewYork, true, true, false);
+            var config = new SubscriptionDataConfig(typeof(QuoteBar), symbol, Resolution.Minute, TimeZones.NewYork, TimeZones.NewYork, true, true, false);
             var security = new Security(
                 SecurityExchangeHoursTests.CreateUsEquitySecurityExchangeHours(),
                 config,
@@ -694,20 +694,24 @@ namespace QuantConnect.Tests.Common.Orders.Fills
             );
             security.SetLocalTimeKeeper(timeKeeper.GetLocalTimeKeeper(TimeZones.NewYork));
 
-            var tradeBar = new TradeBar(time, symbol, 290m, 292m, 289m, 291m, 12345);
-            security.SetMarketPrice(tradeBar);
+            //var quoteBar = new TradeBar(time, symbol, 290m, 292m, 289m, 291m, 12345);
+            var quoteBar = new QuoteBar(time, symbol,
+                new Bar(290m, 292m, 289m, 291m), 12345,
+                new Bar(290m, 292m, 289m, 291m), 12345);
+
+            security.SetMarketPrice(quoteBar);
 
             time += TimeSpan.FromMinutes(1);
             timeKeeper.SetUtcDateTime(time.ConvertToUtc(TimeZones.NewYork));
 
-            var fillForwardBar = (TradeBar)tradeBar.Clone(true);
+            var fillForwardBar = (QuoteBar)quoteBar.Clone(true);
             security.SetMarketPrice(fillForwardBar);
 
             var fillModel = new ImmediateFillModel();
             var order = new StopLimitOrder(symbol, orderQuantity, stopPrice, limitPrice, time.ConvertToUtc(TimeZones.NewYork));
 
             var fill = fillModel.Fill(new FillModelParameters(
-                security,
+                security,       
                 order,
                 new MockSubscriptionDataConfigProvider(config),
                 Time.OneHour)).OrderEvent;
@@ -719,8 +723,10 @@ namespace QuantConnect.Tests.Common.Orders.Fills
             time += TimeSpan.FromMinutes(1);
             timeKeeper.SetUtcDateTime(time.ConvertToUtc(TimeZones.NewYork));
 
-            tradeBar = new TradeBar(time, symbol, 290m, 292m, 289m, 291m, 12345);
-            security.SetMarketPrice(tradeBar);
+            quoteBar = new QuoteBar(time, symbol,
+                new Bar(290m, 292m, 289m, 289m), 12345,
+                new Bar(290m, 292m, 289m, 292m), 12345);
+            security.SetMarketPrice(quoteBar);
 
             fill = fillModel.StopLimitFill(security, order);
 
@@ -735,7 +741,7 @@ namespace QuantConnect.Tests.Common.Orders.Fills
         {
             var model = new ImmediateFillModel();
             var order = new MarketOrder(Symbols.SPY, -100, Noon.ConvertToUtc(TimeZones.NewYork).AddMinutes(61));
-            var config = CreateTradeBarConfig(Symbols.SPY);
+            var config = CreateQuoteBarConfig(Symbols.SPY);
             var security = new Security(
                 SecurityExchangeHoursTests.CreateUsEquitySecurityExchangeHours(),
                 config,
@@ -757,9 +763,9 @@ namespace QuantConnect.Tests.Common.Orders.Fills
             Assert.IsTrue(fill.Message.Contains("Warning: fill at stale price"));
         }
 
-        private SubscriptionDataConfig CreateTradeBarConfig(Symbol symbol)
+        private SubscriptionDataConfig CreateQuoteBarConfig(Symbol symbol)
         {
-            return new SubscriptionDataConfig(typeof(TradeBar), symbol, Resolution.Minute, TimeZones.NewYork, TimeZones.NewYork, true, true, false);
+            return new SubscriptionDataConfig(typeof(QuoteBar), symbol, Resolution.Minute, TimeZones.NewYork, TimeZones.NewYork, true, true, false);
         }
     }
 }
