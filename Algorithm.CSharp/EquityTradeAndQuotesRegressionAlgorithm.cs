@@ -15,7 +15,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using QuantConnect.Data;
+using QuantConnect.Data.UniverseSelection;
 using QuantConnect.Interfaces;
 using QuantConnect.Orders;
 using QuantConnect.Scheduling;
@@ -31,7 +33,10 @@ namespace QuantConnect.Algorithm.CSharp
     public class EquityTradeAndQuotesRegressionAlgorithm : QCAlgorithm, IRegressionAlgorithmDefinition
     {
         private Symbol _symbol;
-        private bool _canTrade = false;
+        private bool _canTrade;
+        private int _quoteCounter;
+        private int _tradeCounter;
+
 
         /// <summary>
         /// Initialise the data and resolution required, as well as the cash and start-end dates for your algorithm. All algorithms must initialized.
@@ -47,6 +52,22 @@ namespace QuantConnect.Algorithm.CSharp
 
             _symbol = AddEquity("IBM", Resolution.Minute).Symbol;
 
+            // 2013-10-07 was Monday, that's why we ask 3 days history to get  data from previous Friday.
+            var history = History(new [] {_symbol}, TimeSpan.FromDays(3), Resolution.Minute).ToList();
+            Log($"{Time} - history.Count: {history.Count}");
+
+            const int expectedSliceCount = 390;
+            if (history.Count != expectedSliceCount)
+            {
+                throw new Exception($"History slices - expected: {expectedSliceCount}, actual: {history.Count}");
+            }
+
+
+            if (history.Any(s => s.Bars.Count != 1 && s.QuoteBars.Count != 1))
+            {
+                throw new Exception($"History not all slices have trades and quotes.");
+            }
+
             Schedule.On(DateRules.EveryDay(_symbol), TimeRules.AfterMarketOpen(_symbol, 0), () => { _canTrade = true; });
 
             Schedule.On(DateRules.EveryDay(_symbol), TimeRules.BeforeMarketClose(_symbol, 16), () => { _canTrade = false; });
@@ -59,6 +80,9 @@ namespace QuantConnect.Algorithm.CSharp
         /// <param name="data">Slice object keyed by symbol containing the stock data</param>
         public override void OnData(Slice data)
         {
+            _quoteCounter += data.QuoteBars.Count;
+            _tradeCounter += data.Bars.Count;
+
             if (!Portfolio.Invested && _canTrade)
             {
                 SetHoldings(_symbol, 1);
@@ -68,6 +92,18 @@ namespace QuantConnect.Algorithm.CSharp
             if (Time.Minute % 15 == 0)
             {
                 Liquidate();
+            }
+        }
+
+        public override void OnSecuritiesChanged(SecurityChanges changes)
+        {
+            var subscriptions = changes.AddedSecurities.First().Subscriptions;
+            if (subscriptions.Count() != 2 &&
+                subscriptions.Any(s=>s.TickType==TickType.Trade) &&
+                subscriptions.Any(s=>s.TickType==TickType.Quote)
+                )
+            {
+                throw new Exception($"Subscriptions were not correctly added.");
             }
         }
 
@@ -85,6 +121,20 @@ namespace QuantConnect.Algorithm.CSharp
             }
         }
 
+        public override void OnEndOfAlgorithm()
+        {
+            // We expect 390 * 5 = 1950 trade bars. 
+            if (_tradeCounter != 1950)
+            {
+                throw new Exception($"Fail at trade bars count expected: 1950, actual: {_tradeCounter}.");
+            }
+            // We expect 390 * 5 = 1950 quote bars. 
+            if (_quoteCounter != 1950)
+            {
+                throw new Exception($"Fail at trade bars count expected: 1950, actual: {_quoteCounter}.");
+            }
+
+        }
 
         /// <summary>
         /// This is used by the regression test system to indicate if the open source Lean repository has the required data to run this algorithm.
